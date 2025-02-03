@@ -4,25 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Câmeras - Ao Vivo</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f9; }
         .controls, .mosaic { margin-top: 20px; }
         .camera iframe { width: 352px; height: 240px; }
-        .g_id_signin { margin-top: 10px; }
         .error { color: red; font-size: 14px; }
+        .login-form { margin-top: 20px; }
     </style>
 </head>
 <body>
     <h1>Câmeras - Ao Vivo</h1>
     <div id="login-section">
-        <div id="g_id_onload"
-             data-client_id="SEU_CLIENT_ID"
-             data-callback="handleCredentialResponse"
-             data-auto_prompt="false">
-        </div>
-        <div class="g_id_signin" data-type="standard"></div>
-        <p id="user-info"></p>
+        <h2>Login</h2>
+        <form id="login-form" class="login-form" onsubmit="event.preventDefault(); loginUser();">
+            <input type="text" id="user-name" placeholder="Nome" required>
+            <input type="text" id="user-phone" placeholder="Número de celular" required>
+            <input type="date" id="user-dob" required>
+            <button type="submit">Entrar</button>
+        </form>
     </div>
     
     <div id="app" style="display: none;">
@@ -41,17 +40,18 @@
         let userID = null;
         let savedCameras = [];
         
-        function handleCredentialResponse(response) {
-            const data = parseJwt(response.credential);
-            userID = data.sub;
-            document.getElementById("user-info").innerText = `Logado como: ${data.name}`;
-            document.getElementById("login-section").style.display = "none";
-            document.getElementById("app").style.display = "block";
-            loadUserCameras();
-        }
-        
-        function parseJwt(token) {
-            return JSON.parse(atob(token.split('.')[1]));
+        function loginUser() {
+            const name = document.getElementById('user-name').value;
+            const phone = document.getElementById('user-phone').value;
+            const dob = document.getElementById('user-dob').value;
+            
+            if (name && phone && dob) {
+                userID = `${name}_${phone}_${dob}`;
+                localStorage.setItem('currentUser', userID);
+                document.getElementById("login-section").style.display = "none";
+                document.getElementById("app").style.display = "block";
+                loadUserCameras();
+            }
         }
         
         function addCamera() {
@@ -108,6 +108,16 @@
             document.querySelector('.mosaic').innerHTML = '';
             saveUserCameras();
         }
+
+        window.onload = function() {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                userID = savedUser;
+                document.getElementById("login-section").style.display = "none";
+                document.getElementById("app").style.display = "block";
+                loadUserCameras();
+            }
+        };
     </script>
 </body>
 </html>
