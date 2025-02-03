@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Câmeras - Ao Vivo</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f9; }
+        .controls, .mosaic { margin-top: 20px; }
+        .camera iframe { width: 352px; height: 240px; }
+        .g_id_signin { margin-top: 10px; }
+        .error { color: red; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <h1>Câmeras - Ao Vivo</h1>
+    <div id="login-section">
+        <div id="g_id_onload"
+             data-client_id="SEU_CLIENT_ID"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin" data-type="standard"></div>
+        <p id="user-info"></p>
+    </div>
+    
+    <div id="app" style="display: none;">
+        <div class="controls">
+            <form onsubmit="event.preventDefault(); addCamera();">
+                <input type="text" id="camera-url" placeholder="URL da câmera" required>
+                <input type="text" id="camera-title" placeholder="Nome">
+                <button type="submit">Adicionar câmera</button>
+            </form>
+            <button onclick="resetCameras()">Resetar câmeras</button>
+        </div>
+        <div class="mosaic"></div>
+    </div>
+
+    <script>
+        let userID = null;
+        let savedCameras = [];
+        
+        function handleCredentialResponse(response) {
+            const data = parseJwt(response.credential);
+            userID = data.sub;
+            document.getElementById("user-info").innerText = `Logado como: ${data.name}`;
+            document.getElementById("login-section").style.display = "none";
+            document.getElementById("app").style.display = "block";
+            loadUserCameras();
+        }
+        
+        function parseJwt(token) {
+            return JSON.parse(atob(token.split('.')[1]));
+        }
+        
+        function addCamera() {
+            const url = document.getElementById('camera-url').value;
+            const title = document.getElementById('camera-title').value || 'Nova Câmera';
+            if (url) {
+                addCameraToMosaic(url, title);
+                savedCameras.push({ url, title });
+                saveUserCameras();
+            }
+            document.getElementById('camera-url').value = '';
+            document.getElementById('camera-title').value = '';
+        }
+        
+        function addCameraToMosaic(url, title) {
+            const mosaic = document.querySelector('.mosaic');
+            const cameraDiv = document.createElement('div');
+            cameraDiv.classList.add('camera');
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = url;
+            iframe.allowFullscreen = true;
+            iframe.onerror = function() {
+                cameraDiv.innerHTML = `<p class='error'>Não foi possível carregar a câmera: ${title}</p>`;
+                const openButton = document.createElement('button');
+                openButton.innerText = "Abrir em nova aba";
+                openButton.onclick = () => window.open(url, '_blank');
+                cameraDiv.appendChild(openButton);
+            };
+            
+            cameraDiv.appendChild(iframe);
+            cameraDiv.innerHTML += `<p>${title}</p>`;
+            mosaic.appendChild(cameraDiv);
+        }
+        
+        function saveUserCameras() {
+            if (userID) {
+                localStorage.setItem(`cameras_${userID}`, JSON.stringify(savedCameras));
+            }
+        }
+        
+        function loadUserCameras() {
+            if (userID) {
+                const storedCameras = localStorage.getItem(`cameras_${userID}`);
+                if (storedCameras) {
+                    savedCameras = JSON.parse(storedCameras);
+                    savedCameras.forEach(({ url, title }) => addCameraToMosaic(url, title));
+                }
+            }
+        }
+        
+        function resetCameras() {
+            savedCameras = [];
+            document.querySelector('.mosaic').innerHTML = '';
+            saveUserCameras();
+        }
+    </script>
+</body>
+</html>
